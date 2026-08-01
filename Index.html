@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>~/portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* 1. Default Dark Theme Variables */
+  :root{
+    --bg: #0b0c0e;
+    --panel: #131519;
+    --panel-2: #1a1d22;
+    --border: #262a31;
+    --text: #d7dbe0;
+    --text-dim: #7d8590;
+    --amber: #f5a623;
+    --amber-dim: #c9861a;
+    --green: #6bcf8f;
+    --cyan: #5fb3b3;
+    --red: #e5534b;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  /* 2. Light Theme Override (High Contrast Dark Text) */
+  body.theme-light {
+    --bg: #f8fafc;
+    --panel: #ffffff;
+    --panel-2: #f1f5f9;
+    --border: #cbd5e1;
+    --text: #0f172a;        /* Dark high-contrast text for high readability */
+    --text-dim: #334155;    /* Clear secondary text */
+    --amber: #c2410c;      
+    --amber-dim: #9a3412;
+    --green: #15803d;      
+    --cyan: #0369a1;       
+    --red: #b91c1c;
+  }
+
+  /* 3. Device/System Theme (Follows System Preferences) */
+  @media (prefers-color-scheme: light) {
+    body.theme-device {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --panel-2: #f1f5f9;
+      --border: #cbd5e1;
+      --text: #0f172a;
+      --text-dim: #334155;
+      --amber: #c2410c;
+      --amber-dim: #9a3412;
+      --green: #15803d;
+      --cyan: #0369a1;
+      --red: #b91c1c;
+    }
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    line-height: 1.6;
+    background-image:
+      radial-gradient(circle at 20% 0%, rgba(245,166,35,0.05), transparent 40%),
+      radial-gradient(circle at 80% 100%, rgba(95,179,179,0.05), transparent 40%);
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+  ::selection{ background: var(--amber); color: #ffffff; }
+
+  a{ color: var(--amber); text-decoration:none; font-weight: 500; }
+  a:hover{ text-decoration:underline; }
+
+  .wrap{ max-width: 880px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---- Topbar Header ---- */
+  header.topbar{
+    position: sticky; top:0; z-index: 50;
+    background: rgba(11,12,14,0.85);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+  }
+  body.theme-light header.topbar,
+  body.theme-device header.topbar {
+    background: rgba(248,250,252,0.85);
+  }
+  .topbar-inner{
+    width: 100%; padding: 14px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+    font-family: var(--mono); font-size: 13px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .prompt-user{ color: var(--green); font-weight: 600; }
+  .prompt-path{ color: var(--cyan); font-weight: 600; }
+  
+  .topbar nav { display: flex; align-items: center; }
+  .topbar nav button{ 
+    background: none;
+    border: none;
+    color: var(--text-dim); 
+    margin-left: 18px; 
+    font-family: var(--mono); 
+    font-size: 13px; 
+    font-weight: 600;
+    position: relative; 
+    padding-bottom: 2px;
+    cursor: pointer;
+    transition: color 0.3s ease;
+  }
+  .topbar nav button::after{
+    content:""; position:absolute; left:0; bottom:0; width:0; height:1px;
+    background: var(--amber); transition: width .25s ease;
+  }
+  .topbar nav button:hover, .topbar nav button.active{ 
+    color: var(--amber); 
+  }
+  .topbar nav button:hover::after, .topbar nav button.active::after{ 
+    width: 100%; 
+  }
+
+  .theme-select-dropdown {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    margin-left: 16px;
+    cursor: pointer;
+    outline: none;
+  }
+
+  /* ---- Dropdown Panel Section ---- */
+  .nav-panel-wrapper {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    height: 0;
+    opacity: 0;
+    overflow: hidden;
+    position: relative;
+    z-index: 40;
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    transition: height 0.5s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease-in-out;
+  }
+  
+  .nav-panel-wrapper.open { opacity: 1; }
+
+  .nav-panel-content {
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 30px 24px;
+    position: relative;
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 15px;
+    right: 24px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+  }
+  .close-btn:hover { color: var(--red); transform: scale(1.15); }
+
+  .tab-pane { 
+    display: none; 
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: opacity 0.4s ease 0.1s, transform 0.4s cubic-bezier(0.25, 1, 0.5, 1) 0.1s;
+  }
+  .tab-pane.active { 
+    display: block; 
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ---- Terminal Hero Section ---- */
+  .hero{ padding: 64px 0 40px; }
+  .terminal{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+    animation: terminalIn .6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes terminalIn{
+    to{ opacity: 1; transform: scale(1) translateY(0); }
+  }
+  .terminal-bar{
+    background: var(--panel-2);
+    padding: 10px 14px;
+    display:flex; align-items:center; gap:8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .dot{ width:11px; height:11px; border-radius:50%; }
+  .dot.r{ background:#ff5f56; } .dot.y{ background:#ffbd2e; } .dot.g{ background:#27c93f; }
+  .terminal-title{ margin-left: 10px; font-family: var(--mono); font-size: 12px; color: var(--text-dim); }
+  .terminal-body{ padding: 26px 24px 30px; font-family: var(--mono); font-size: 14px; }
+  .line{ margin-bottom: 6px; white-space: pre-wrap; color: var(--text); }
+  .out{ color: var(--text-dim); }
+  .name-line{ font-size: 28px; font-weight: 800; color: var(--text); margin: 10px 0 4px; }
+  .role-line{ color: var(--amber); font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+  .cursor{ display:inline-block; width:9px; height:18px; background: var(--amber); vertical-align: middle; animation: blink 1s steps(1) infinite; }
+  .cursor.typing{ animation: none; opacity: 1; }
+  @keyframes blink{ 50%{ opacity:0; } }
+  .tagline{ color: var(--text-dim); max-width: 60ch; font-weight: 500; }
+
+  /* ---- Buttons & Curl Command Styling ---- */
+  .btn-action {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 8px 16px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--amber);
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-action:hover {
+    background: var(--amber);
+    color: #ffffff;
+    text-decoration: none;
+  }
+
+  /* ---- Main Sections Styling ---- */
+  section{ padding: 54px 0; border-top: 1px solid var(--border); }
+  section.reveal{ opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+  section.reveal.in-view{ opacity: 1; transform: translateY(0); }
+  .cmd{
+    font-family: var(--mono); font-size: 13px; color: var(--text-dim);
+    margin-bottom: 22px; display:flex; align-items:center; gap:10px; font-weight: 600;
+  }
+  .cmd::before{ content: "$"; color: var(--green); }
+  .cmd b{ color: var(--text); font-weight: 700; }
+
+  h2.section-title{
+    font-family: var(--mono); font-size: 22px; color: var(--text);
+    margin-bottom: 6px; font-weight: 800;
+  }
+  .section-sub{ color: var(--text-dim); font-size: 14px; margin-bottom: 26px; font-weight: 500; }
+
+  /* ---- Skills & Projects Layout ---- */
+  .about-text{ color: var(--text); font-size: 15.5px; max-width: 65ch; font-weight: 500; }
+  .about-text .k{ color: var(--amber); font-family: var(--mono); font-weight: 700; }
+  .skill-rows{ display:flex; flex-direction:column; gap:14px; max-width: 520px; }
+  .skill-row{ display:grid; grid-template-columns: 120px 1fr 40px; align-items:center; gap:14px; font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .skill-name{ color: var(--text); }
+  .skill-track{ height:8px; background: var(--panel-2); border:1px solid var(--border); border-radius:4px; overflow:hidden; }
+  .skill-fill{ height:100%; background: linear-gradient(90deg, var(--amber-dim), var(--amber)); border-radius:4px; transition: width 1.1s cubic-bezier(0.25, 1, 0.5, 1); }
+  .skill-pct{ color: var(--text-dim); text-align:right; font-weight: 700; }
+
+  .projects{ display:grid; grid-template-columns: 1fr; gap: 18px; }
+  @media(min-width:680px){ .projects{ grid-template-columns: 1fr 1fr; } }
+  .card{
+    background: var(--panel); border:1px solid var(--border); border-radius: 8px;
+    padding: 20px 20px 18px; display:flex; flex-direction:column; gap: 10px;
+    transition: border-color .15s ease, transform .15s ease, opacity .6s ease;
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  .card.in-view{ opacity: 1; transform: translateY(0); }
+  .card:hover{ border-color: var(--amber-dim); transform: translateY(-2px); }
+  .card-head{ display:flex; align-items:center; justify-content:space-between; }
+  .card-title{ font-family: var(--mono); font-weight:700; color: var(--text); font-size:15px; }
+  .card-tag{ font-family: var(--mono); font-size:11px; font-weight: 700; color: var(--cyan); border:1px solid var(--border); padding:2px 8px; border-radius: 20px; }
+  .card-desc{ color: var(--text-dim); font-size: 13.5px; font-weight: 500; }
+  .card-stack{ font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--green); margin-top:4px; }
+  .card-links{ margin-top: 8px; display:flex; gap:16px; font-family: var(--mono); font-size:12.5px; font-weight: 600; }
+
+  .contact-box{
+    background: var(--panel); border:1px solid var(--border); border-radius:8px;
+    padding: 26px; font-family: var(--mono); font-size: 14px; font-weight: 600;
+  }
+  .contact-row{ display:flex; gap:10px; margin-bottom:10px; }
+  .contact-row .k{ color: var(--text-dim); min-width: 90px; }
+  .contact-row .v{ color: var(--text); }
+
+  footer{ padding: 30px 0 50px; text-align:center; color: var(--text-dim); font-family: var(--mono); font-size: 12px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- Header Navigation Bar -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div><span class="prompt-user">Mayur@portfolio</span>:<span class="prompt-path">~</span>$</div>
+    <nav>
+      <button onclick="toggleTab('quick-about', event)">about</button>
+      <button onclick="toggleTab('quick-skills', event)">skills</button>
+      <button onclick="toggleTab('quick-projects', event)">projects</button>
+      <button onclick="toggleTab('quick-contact', event)">contact</button>
+      
+      <!-- Theme Switcher Options -->
+      <select id="themeSelect" class="theme-select-dropdown" onchange="changeTheme(this.value)">
+        <option value="dark">🌙 Dark</option>
+        <option value="light">☀️ Light</option>
+        <option value="device">💻 Device</option>
+      </select>
+    </nav>
+  </div>
+</header>
+
+<!-- Top Nav Dropdown Box -->
+<div id="nav-panel" class="nav-panel-wrapper">
+  <div class="nav-panel-content" id="panel-content">
+    <button class="close-btn" onclick="closePanel()">✕</button>
+
+    <!-- Quick About Section -->
+    <div id="quick-about" class="tab-pane">
+      <div class="cmd">cat <b>about.md</b></div>
+      <h2 class="section-title">About</h2>
+      <div class="about-text">
+        I'm a student developer working through <span class="k">Core Java</span> — from classes and constructors toward OOP and beyond — while sharpening <span class="k">HTML</span> and <span class="k">CSS</span> on the side.
+        <br><br>
+        Next stop: <span class="k">Spring Boot</span> and backend web development.
+      </div>
+      <a href="#" class="btn-action" onclick="alert('Downloading Resume...'); return false;">$ curl -O mayur_resume.pdf</a>
+    </div>
+
+    <!-- Quick Skills Section -->
+    <div id="quick-skills" class="tab-pane">
+      <div class="cmd">./skills <b>--list</b></div>
+      <h2 class="section-title">Skills</h2>
+      <div class="section-sub">Currently learning — updated as I go.</div>
+      <div class="skill-rows">
+        <div class="skill-row">
+          <div class="skill-name">Java (OOP)</div>
+          <div class="skill-track"><div class="skill-fill" data-width="55" style="width:0%"></div></div>
+          <div class="skill-pct">55%</div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-name">HTML</div>
+          <div class="skill-track"><div class="skill-fill" data-width="75" style="width:0%"></div></div>
+          <div class="skill-pct">75%</div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-name">CSS</div>
+          <div class="skill-track"><div class="skill-fill" data-width="70" style="width:0%"></div></div>
+          <div class="skill-pct">70%</div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-name">Git &amp; GitHub</div>
+          <div class="skill-track"><div class="skill-fill" data-width="35" style="width:0%"></div></div>
+          <div class="skill-pct">35%</div>
+        </div>
+        <div class="skill-row">
+          <div class="skill-name">Spring Boot</div>
+          <div class="skill-track"><div class="skill-fill" data-width="10" style="width:0%"></div></div>
+          <div class="skill-pct">10%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Projects Section -->
+    <div id="quick-projects" class="tab-pane">
+      <div class="cmd">ls <b>~/projects</b></div>
+      <h2 class="section-title">Projects</h2>
+      <div class="section-sub">Console-based Java projects built to practice OOP fundamentals.</div>
+      <div class="projects">
+        <div class="card in-view">
+          <div class="card-head">
+            <div class="card-title">hospital-management-system</div>
+            <div class="card-tag">console</div>
+          </div>
+          <div class="card-desc">Manages patient records, doctor details, and appointments through a console interface.</div>
+          <div class="card-stack">Java</div>
+          <div class="card-links">
+            <a href="https://github.com/CodeMayur14/HospitalManagementSystem" target="_blank">→ source</a>
+            <a href="https://github.com/CodeMayur14/HospitalManagementSystem" target="_blank">→ readme</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Contact Section -->
+    <div id="quick-contact" class="tab-pane">
+      <div class="cmd">cat <b>contact.txt</b></div>
+      <h2 class="section-title">Contact</h2>
+      <div class="contact-box">
+        <div class="contact-row"><div class="k">email</div><div class="v">mayurdandgavhal0@gmail.com</div></div>
+        <div class="contact-row"><div class="k">github</div><div class="v"><a href="https://github.com/CodeMayur14" target="_blank">github.com/CodeMayur14</a></div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Main Page Content Area -->
+<div class="wrap">
+
+  <!-- Terminal Hero Banner -->
+  <div class="hero">
+    <div class="terminal">
+      <div class="terminal-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="terminal-title">bash — whoami</span>
+      </div>
+      <div class="terminal-body">
+        <div class="line">$ whoami</div>
+        <div class="name-line">Mayur Dandgavhal</div>
+        <div class="role-line">&gt; Java Developer &amp; Web Enthusiast</div>
+        <div class="line out">$ cat status.txt</div>
+        <div class="tagline"><span id="typedText"></span><span class="cursor"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main About Section -->
+  <section id="about" class="reveal">
+    <div class="cmd">cat <b>about.md</b></div>
+    <h2 class="section-title">About</h2>
+    <div class="about-text">
+      I'm a student developer working through <span class="k">Core Java</span> — from classes and constructors toward OOP and beyond — while sharpening <span class="k">HTML</span> and <span class="k">CSS</span> on the side.
+      <br><br>
+      Next stop: <span class="k">Spring Boot</span> and backend web development.
+    </div>
+    <a href="#" class="btn-action" onclick="alert('Downloading Resume...'); return false;">$ curl -O mayur_resume.pdf</a>
+  </section>
+
+  <!-- Main Skills Section -->
+  <section id="skills" class="reveal">
+    <div class="cmd">./skills<b>--list</b></div>
+    <h2 class="section-title">Skills</h2>
+    <div class="section-sub">Currently learning — updated as I go.</div>
+    <div class="skill-rows">
+      <div class="skill-row">
+        <div class="skill-name">Java (OOP)</div>
+        <div class="skill-track"><div class="skill-fill" data-width="55" style="width:0%"></div></div>
+        <div class="skill-pct" data-target="55">0%</div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-name">HTML</div>
+        <div class="skill-track"><div class="skill-fill" data-width="75" style="width:0%"></div></div>
+        <div class="skill-pct" data-target="75">0%</div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-name">CSS</div>
+        <div class="skill-track"><div class="skill-fill" data-width="70" style="width:0%"></div></div>
+        <div class="skill-pct" data-target="70">0%</div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-name">Git &amp; GitHub</div>
+        <div class="skill-track"><div class="skill-fill" data-width="35" style="width:0%"></div></div>
+        <div class="skill-pct" data-target="35">0%</div>
+      </div>
+      <div class="skill-row">
+        <div class="skill-name">Spring Boot</div>
+        <div class="skill-track"><div class="skill-fill" data-width="10" style="width:0%"></div></div>
+        <div class="skill-pct" data-target="10">0%</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Projects Section -->
+  <section id="projects" class="reveal">
+    <div class="cmd">ls <b>~/projects</b></div>
+    <h2 class="section-title">Projects</h2>
+    <div class="section-sub">Console-based Java projects built to practice OOP fundamentals.</div>
+    <div class="projects">
+      <div class="card">
+        <div class="card-head">
+          <div class="card-title">hospital-management-system</div>
+          <div class="card-tag">console</div>
+        </div>
+        <div class="card-desc">Manages patient records, doctor details, and appointments through a console interface.</div>
+        <div class="card-stack">Java</div>
+        <div class="card-links">
+          <a href="https://github.com/CodeMayur14/HospitalManagementSystem" target="_blank">→ source</a>
+          <a href="https://github.com/CodeMayur14/HospitalManagementSystem" target="_blank">→ readme</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Main Contact Section -->
+  <section id="contact" class="reveal">
+    <div class="cmd">cat <b>contact.txt</b></div>
+    <h2 class="section-title">Contact</h2>
+    <div class="contact-box">
+      <div class="contact-row"><div class="k">email</div><div class="v">mayurdandgavhal0@gmail.com</div></div>
+      <div class="contact-row"><div class="k">github</div><div class="v"><a href="https://github.com/CodeMayur14" target="_blank">github.com/CodeMayur14</a></div></div>
+    </div>
+  </section>
+
+</div>
+
+<footer>built with HTML &amp; CSS — no framework, no fuss.</footer>
+
+<script>
+  // Theme Switching Functionality
+  function changeTheme(theme) {
+    document.body.classList.remove('theme-light', 'theme-device');
+    
+    if (theme === 'light') {
+      document.body.classList.add('theme-light');
+    } else if (theme === 'device') {
+      document.body.classList.add('theme-device');
+    }
+    
+    localStorage.setItem('selectedTheme', theme);
+  }
+
+  // Restore User Theme Preference on Page Load
+  window.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('selectedTheme') || 'dark';
+    const selectEl = document.getElementById('themeSelect');
+    if (selectEl) selectEl.value = savedTheme;
+    changeTheme(savedTheme);
+
+    // Initialize Hero Typing Animation
+    heroCursor.classList.add('typing');
+    setTimeout(typeChar, 400);
+  });
+
+  // Hero Section Auto-Typing Effect
+  const fullText = "Learning Java (OOP → Spring Boot) and building things with HTML & CSS along the way. Currently exploring backend development, one project at a time.";
+  const typedEl = document.getElementById('typedText');
+  const heroCursor = document.querySelector('.tagline .cursor');
+  let charIndex = 0;
+
+  function typeChar(){
+    if(charIndex <= fullText.length){
+      typedEl.textContent = fullText.slice(0, charIndex);
+      charIndex++;
+      setTimeout(typeChar, 6);
+    } else {
+      heroCursor.classList.remove('typing');
+    }
+  }
+
+  // Dynamic Height Nav Dropdown Toggle
+  let currentActiveTab = null;
+
+  function toggleTab(tabId, evt) {
+    const panel = document.getElementById('nav-panel');
+    const content = document.getElementById('panel-content');
+    const targetTab = document.getElementById(tabId);
+    const buttons = document.querySelectorAll('.topbar nav button');
+
+    if (currentActiveTab === tabId && panel.classList.contains('open')) {
+      closePanel();
+      return;
+    }
+
+    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+    buttons.forEach(btn => btn.classList.remove('active'));
+
+    targetTab.classList.add('active');
+    if(evt && evt.currentTarget) {
+      evt.currentTarget.classList.add('active');
+    }
+
+    panel.classList.add('open');
+    panel.style.height = content.offsetHeight + 'px';
+    currentActiveTab = tabId;
+
+    if (tabId === 'quick-skills') {
+      setTimeout(() => {
+        document.querySelectorAll('#quick-skills .skill-fill').forEach(fill => {
+          fill.style.width = fill.getAttribute('data-width') + '%';
+        });
+      }, 150);
+    } else {
+      document.querySelectorAll('#quick-skills .skill-fill').forEach(fill => {
+        fill.style.width = '0%';
+      });
+    }
+  }
+
+  function closePanel() {
+    const panel = document.getElementById('nav-panel');
+    panel.style.height = '0px';
+    panel.classList.remove('open');
+    document.querySelectorAll('.topbar nav button').forEach(btn => btn.classList.remove('active'));
+    currentActiveTab = null;
+  }
+
+  // Scroll Animations using IntersectionObserver
+  const revealSections = document.querySelectorAll('section.reveal');
+  const sectionObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        entry.target.classList.add('in-view');
+      } else {
+        entry.target.classList.remove('in-view');
+      }
+    });
+  }, { threshold: 0.15 });
+  revealSections.forEach(sec => sectionObserver.observe(sec));
+
+  const cards = document.querySelectorAll('.projects .card');
+  const cardObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if(entry.isIntersecting){
+        const allCards = Array.from(cards);
+        const idx = allCards.indexOf(entry.target);
+        setTimeout(() => entry.target.classList.add('in-view'), idx * 120);
+      } else {
+        entry.target.classList.remove('in-view');
+      }
+    });
+  }, { threshold: 0.2 });
+  cards.forEach(card => cardObserver.observe(card));
+
+  const skillRows = document.querySelectorAll('#skills .skill-row');
+  const skillObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const row = entry.target;
+      const fill = row.querySelector('.skill-fill');
+      const pct = row.querySelector('.skill-pct');
+      const target = parseInt(fill.getAttribute('data-width'), 10);
+
+      if(entry.isIntersecting){
+        if(row._countInterval) clearInterval(row._countInterval);
+        fill.style.width = target + '%';
+        let current = 0;
+        const duration = 1100;
+        const stepTime = 16;
+        const steps = duration / stepTime;
+        const increment = target / steps;
+        row._countInterval = setInterval(() => {
+          current += increment;
+          if(current >= target){
+            current = target;
+            clearInterval(row._countInterval);
+          }
+          pct.textContent = Math.round(current) + '%';
+        }, stepTime);
+      } else {
+        if(row._countInterval) clearInterval(row._countInterval);
+        fill.style.width = '0%';
+        pct.textContent = '0%';
+      }
+    });
+  }, { threshold: 0.3 });
+  skillRows.forEach(row => skillObserver.observe(row));
+</script>
+</body>
+</html>
